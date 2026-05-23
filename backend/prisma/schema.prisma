@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique
+  phoneNumber String   @unique
+  email       String?  @unique
+  name        String?
+  role        Role     @default(CUSTOMER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  helperProfile HelperProfile?
+  tasksPosted   Task[]         @relation("CustomerTasks")
+  tasksAssigned Task[]         @relation("HelperTasks")
+  reviewsGiven  Review[]       @relation("ReviewsGiven")
+  reviewsReceived Review[]     @relation("ReviewsReceived")
+}
+
+enum Role {
+  CUSTOMER
+  HELPER
+  ADMIN
+}
+
+model HelperProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  skills         String[]
+  experience     Int      @default(0) // in months
+  panCard        String?
+  aadhaarCard    String?
+  bankAccount    String?
+  isVerified     Boolean  @default(false)
+  isOnline       Boolean  @default(false)
+  latitude       Float?
+  longitude      Float?
+  serviceRadius  Int      @default(10) // in km
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Task {
+  id             String      @id @default(uuid())
+  title          String
+  description    String
+  categoryId     String
+  category       Category    @relation(fields: [categoryId], references: [id])
+  status         TaskStatus  @default(OPEN)
+  budget         Float
+  isEmergency    Boolean     @default(false)
+  
+  // Location
+  latitude       Float
+  longitude      Float
+  address        String
+  
+  // Relations
+  customerId     String
+  customer       User        @relation("CustomerTasks", fields: [customerId], references: [id])
+  helperId       String?
+  helper         User?       @relation("HelperTasks", fields: [helperId], references: [id])
+  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+enum TaskStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  imageUrl    String?
+  tasks       Task[]
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  rating      Int
+  comment     String?
+  
+  reviewerId  String
+  reviewer    User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  
+  revieweeId  String
+  reviewee    User     @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  
+  taskId      String   @unique
+  
+  createdAt   DateTime @default(now())
+}
